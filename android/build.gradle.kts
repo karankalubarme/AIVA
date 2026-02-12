@@ -1,3 +1,16 @@
+// 1. THIS BUILDSCRIPT BLOCK IS WHAT WAS MISSING
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // This is the line that lets Android "see" the Google Services plugin
+        classpath("com.google.gms:google-services:4.4.4")
+    }
+}
+
+// 2. The rest of your existing configuration stays below
 allprojects {
     repositories {
         google()
@@ -5,10 +18,7 @@ allprojects {
     }
 }
 
-val newBuildDir: Directory =
-    rootProject.layout.buildDirectory
-        .dir("../../build")
-        .get()
+val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart'; // Ensure this path is correct
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -8,13 +9,78 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  // Controllers
+  // Controllers (Simplified - only what is needed)
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _mobileController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
-  final TextEditingController _confirmPassController = TextEditingController();
+
+  bool _isLoading = false; // To show the loading spinner
+
+  @override
+  void dispose() {
+    // Clean up controllers to prevent memory leaks
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passController.dispose();
+    super.dispose();
+  }
+
+  // --- SIGN UP LOGIC ---
+  Future<void> _handleSignUp() async {
+    // 1. Validate inputs
+    String email = _emailController.text.trim();
+    String password = _passController.text.trim();
+    String username = _usernameController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || username.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all required fields")),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password must be at least 6 characters")),
+      );
+      return;
+    }
+
+    // 2. Start Loading
+    setState(() {
+      _isLoading = true;
+    });
+
+    // 3. Call Firebase Service
+    // We pass 'username' as the 'name' to be saved in Firebase
+    String? result = await AuthService().signUpUser(
+      email: email,
+      password: password,
+      name: username,
+    );
+
+    // 4. Stop Loading
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
+    // 5. Handle Result
+    if (result == null && mounted) {
+      // SUCCESS: Navigate to Dashboard
+      // .pushAndRemoveUntil removes the back button so user can't go back to signup
+      Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+    } else if (mounted) {
+      // FAILURE: Show Error Message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result ?? "An unknown error occurred"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,27 +107,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 60),
 
-                  // 2. Logo & Name
+                  // 2. Logo & App Name
                   Image.asset(
-                    'assets/images/logo1.png', // Make sure you have this logo
-                    height: 80,
+                    'assets/images/logo1.png',
+                    height: 100,
                   ),
                   const SizedBox(height: 10),
                   const Text(
                     "AIVA",
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                       letterSpacing: 2,
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 40),
 
-                  // 3. Title "CREATE ACCOUNT"
+                  // 3. "CREATE ACCOUNT" Title
                   ShaderMask(
                     shaderCallback: (bounds) => const LinearGradient(
                       colors: [Color(0xFF26C6DA), Color(0xFF00ACC1)],
@@ -69,14 +135,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: const Text(
                       "CREATE ACCOUNT",
                       style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 28,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
 
                   // --- FORM FIELDS ---
 
@@ -86,105 +152,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     icon: Icons.person_outline,
                     hintText: "Username",
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
 
-                  // 5. Mobile Number
-                  _buildTextField(
-                    controller: _mobileController,
-                    icon: Icons.phone_android_outlined,
-                    hintText: "Mobile Number",
-                    inputType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 15),
-
-                  // 6. OTP Field with "SEND" Button
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _otpController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.lock_clock_outlined, color: Color(0xFF26C6DA)),
-                        hintText: "Enter OTP",
-                        hintStyle: TextStyle(color: Colors.grey[500]),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                        // Small "SEND" button inside the field
-                        suffixIcon: Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: TextButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("OTP Sent!")),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              backgroundColor: const Color(0xFF00ACC1),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              minimumSize: const Size(60, 30),
-                            ),
-                            child: const Text(
-                              "SEND",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // 7. Email Address
+                  // 5. Email Address
                   _buildTextField(
                     controller: _emailController,
                     icon: Icons.email_outlined,
                     hintText: "Email Address",
                     inputType: TextInputType.emailAddress,
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
 
-                  // 8. Password
+                  // 6. Password
                   _buildTextField(
                     controller: _passController,
                     icon: Icons.lock_outline,
                     hintText: "Password",
                     isPassword: true,
                   ),
-                  const SizedBox(height: 15),
-
-                  // 9. Confirm Password
-                  _buildTextField(
-                    controller: _confirmPassController,
-                    icon: Icons.lock_reset,
-                    hintText: "Confirm Password",
-                    isPassword: true,
-                  ),
 
                   const SizedBox(height: 40),
 
-                  // 10. SIGN UP BUTTON
+                  // 7. SIGN UP BUTTON
                   GestureDetector(
-                    onTap: () {
-                      // Navigate to Dashboard after signup
-                      Navigator.pushReplacementNamed(context, '/dashboard');
-                    },
+                    onTap: _isLoading ? null : _handleSignUp, // Disable tap while loading
                     child: Container(
                       width: double.infinity,
                       height: 55,
@@ -204,8 +195,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Text(
+                      child: Center(
+                        // Show Spinner if loading, otherwise show Text
+                        child: _isLoading
+                            ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : const Text(
                           "SIGN UP",
                           style: TextStyle(
                             color: Colors.white,
@@ -220,7 +221,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 11. Login Link
+                  // 8. Login Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -253,7 +254,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Helper Widget for Text Fields
+  // --- Helper Widget for Text Fields ---
   Widget _buildTextField({
     required TextEditingController controller,
     required IconData icon,

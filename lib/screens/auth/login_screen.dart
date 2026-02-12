@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart'; // <--- Import AuthService
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -8,9 +9,61 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Controllers to get the text from inputs
+  // Controllers
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _passController = TextEditingController();
+
+  bool _isLoading = false; // For loading spinner
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passController.dispose();
+    super.dispose();
+  }
+
+  // --- LOGIN LOGIC ---
+  void _handleLogin() async {
+    String email = _emailController.text.trim();
+    String password = _passController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
+
+    // 1. Start Loading
+    setState(() {
+      _isLoading = true;
+    });
+
+    // 2. Call Firebase Service
+    String? result = await AuthService().loginUser(
+      email: email,
+      password: password,
+    );
+
+    // 3. Stop Loading
+    setState(() {
+      _isLoading = false;
+    });
+
+    // 4. Handle Result
+    if (result == null) {
+      // SUCCESS: Navigate to Dashboard
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    } else {
+      // FAILURE: Show Error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // 1. Background Gradient (Matches Splash Screen)
+        // Gradient Background
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -37,77 +90,116 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 50),
 
-                  // 2. Logo & App Name
+                  // Logo
                   Image.asset(
-                    'assets/images/logo1.png', // Ensure this matches your file name
+                    'assets/images/logo1.png',
                     height: 100,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
                   const Text(
-                    "AIVA",
+                    "WELCOME BACK",
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                      letterSpacing: 2,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF00ACC1),
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const Text(
+                    "Login to continue",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 50),
 
-                  // 3. "WELCOME BACK" Title
-                  ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFF26C6DA), Color(0xFF00ACC1)],
-                    ).createShader(bounds),
-                    child: const Text(
-                      "WELCOME BACK",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                  // Email Field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF26C6DA)),
+                        hintText: "Email Address",
+                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 40),
-
-                  // 4. Email Input Field
-                  _buildTextField(
-                    controller: _emailController,
-                    icon: Icons.email_outlined,
-                    hintText: "Email Address",
-                  ),
-
                   const SizedBox(height: 20),
 
-                  // 5. Password Input Field
-                  _buildTextField(
-                    controller: _passwordController,
-                    icon: Icons.lock_outline,
-                    hintText: "Password",
-                    isPassword: true,
+                  // Password Field
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _passController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF26C6DA)),
+                        hintText: "Password",
+                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      ),
+                    ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 10),
 
-                  // 6. Login Button (Gradient)
+                  // Forgot Password Link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        // Add Forgot Password logic later
+                      },
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(color: Color(0xFF00ACC1)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // LOGIN BUTTON
                   GestureDetector(
-                    onTap: () {
-                      // UPDATED: Navigates to Dashboard now
-                      // print("Login Button Clicked"); // Optional debug print
-                      Navigator.pushReplacementNamed(context, '/dashboard');
-                    },
+                    onTap: _handleLogin, // <--- Call the login function
                     child: Container(
                       width: double.infinity,
                       height: 55,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFF26C6DA), // Cyan
-                            Color(0xFF29B6F6), // Blue
+                            Color(0xFF26C6DA),
+                            Color(0xFF29B6F6),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(30),
@@ -119,8 +211,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Text(
+                      child: Center(
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
                           "LOGIN",
                           style: TextStyle(
                             color: Colors.white,
@@ -133,19 +227,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
 
-                  // 7. Footer Links
-                  TextButton(
-                    onPressed: () {
-                      // Handle Forgot Password
-                    },
-                    child: Text(
-                      "Forgot Password?",
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                  ),
-
+                  // Sign Up Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -155,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       GestureDetector(
                         onTap: () {
-                          // Correctly navigates to Sign Up screen
+                          // Navigate to Sign Up
                           Navigator.pushNamed(context, '/signup');
                         },
                         child: const Text(
@@ -168,45 +252,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  // --- Helper Widget for Text Fields ---
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required IconData icon,
-    required String hintText,
-    bool isPassword = false,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword,
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: const Color(0xFF26C6DA)),
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey[500]),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         ),
       ),
     );
