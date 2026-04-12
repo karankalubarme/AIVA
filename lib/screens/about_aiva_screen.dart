@@ -41,7 +41,7 @@ class AboutAivaScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
@@ -102,7 +102,7 @@ class AboutAivaScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -195,7 +195,7 @@ class AboutAivaScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -205,7 +205,7 @@ class AboutAivaScreen extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.black : const Color(0xFFE0F7FA).withOpacity(0.5),
+            color: isDark ? Colors.black : const Color(0xFFE0F7FA).withValues(alpha: 0.5),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: const Color(0xFF26C6DA), size: 20),

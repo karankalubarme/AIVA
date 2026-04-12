@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/appwrite_auth_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -9,6 +10,22 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  String _userName = "User";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await AppwriteAuthService().getCurrentUser();
+    if (user != null && user.name.isNotEmpty) {
+      setState(() {
+        _userName = user.name;
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -77,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       Text(
-                        "User Name",
+                        _userName,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -95,7 +112,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.cyan.withOpacity(0.2),
+                            color: Colors.cyan.withValues(alpha: 0.2),
                             blurRadius: 15,
                             spreadRadius: 2,
                           )
@@ -122,7 +139,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF00ACC1).withOpacity(0.3),
+                      color: const Color(0xFF00ACC1).withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     )
@@ -247,7 +264,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -258,7 +275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? color.withOpacity(0.1) : color,
+                color: isDark ? color.withValues(alpha: 0.1) : color,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(icon, color: iconColor),
@@ -302,7 +319,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           )
