@@ -135,7 +135,7 @@ class AboutAivaScreen extends StatelessWidget {
 
           _buildTechTile(context, Icons.auto_awesome, "Google Gemini Pro", "Advanced Conversational AI", isDark),
           _buildTechTile(context, Icons.flutter_dash, "Flutter", "Cross-Platform UI Framework", isDark),
-          _buildTechTile(context, Icons.cloud_done_outlined, "Firebase", "Secure Authentication & Database", isDark),
+          _buildTechTile(context, Icons.cloud_done_outlined, "Appwrite", "Secure Authentication & Database", isDark),
 
           const SizedBox(height: 30),
 

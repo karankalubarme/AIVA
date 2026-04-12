@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart'; // Ensure this path is correct
+import '../../services/appwrite_auth_service.dart'; // Ensure this path is correct
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -39,9 +39,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) { // Appwrite requires at least 8 chars
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Password must be at least 6 characters")),
+        const SnackBar(content: Text("Password must be at least 8 characters")),
       );
       return;
     }
@@ -51,9 +51,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _isLoading = true;
     });
 
-    // 3. Call Firebase Service
-    // We pass 'username' as the 'name' to be saved in Firebase
-    String? result = await AuthService().signUpUser(
+    // 3. Call Appwrite Service
+    // We pass 'username' as the 'name' to be saved
+    String? result = await AppwriteAuthService().signUpUser(
       email: email,
       password: password,
       name: username,
@@ -68,9 +68,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     // 5. Handle Result
     if (result == null && mounted) {
-      // SUCCESS: Navigate to Dashboard
-      // .pushAndRemoveUntil removes the back button so user can't go back to signup
-      Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+      // SUCCESS: After signup, we need to login to get a session
+      String? loginResult = await AppwriteAuthService().loginUser(
+        email: email,
+        password: password,
+      );
+      
+      if (loginResult == null && mounted) {
+        // SUCCESS: Navigate to Dashboard
+        Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(loginResult ?? "Login failed after signup"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } else if (mounted) {
       // FAILURE: Show Error Message
       ScaffoldMessenger.of(context).showSnackBar(

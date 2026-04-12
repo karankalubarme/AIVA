@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart'; // <--- Import AuthService
+import '../../services/appwrite_auth_service.dart'; // <--- Import AppwriteAuthService
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,8 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // 2. Call Firebase Service
-    String? result = await AuthService().loginUser(
+    // 2. Call Appwrite Service
+    String? result = await AppwriteAuthService().loginUser(
       email: email,
       password: password,
     );

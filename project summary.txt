@@ -1,0 +1,112 @@
+PROJECT SUMMARY: AIVA Assistant
+==============================
+
+This document contains a list of all functions implemented in the AIVA Assistant project.
+
+FILE: lib/main.dart
+-------------------
+- void main(): Entry point of the application, initializes Firebase and runs the AivaApp.
+- Widget build(BuildContext context): Builds the root MaterialApp with light and dark themes and persistent login logic.
+
+FILE: lib/theme_manager.dart
+----------------------------
+- static void toggleTheme(bool isDark): Toggles the application theme between light and dark modes using a ValueNotifier.
+
+FILE: lib/services/auth_service.dart
+------------------------------------
+- Future<String?> signUpUser({required String email, required String password, required String name}): Creates a new user in Firebase Auth and saves details to Firestore.
+- Future<String?> loginUser({required String email, required String password}): Authenticates a user with email and password using Firebase Auth.
+- Future<Map<String, dynamic>?> getCurrentUserData(): Fetches the currently logged-in user's data from Firestore.
+- Future<void> signOut(): Logs out the current user from Firebase.
+
+FILE: lib/services/gemini_service.dart
+--------------------------------------
+- GeminiService(): Constructor that initializes the Google Generative AI model and starts a chat session.
+- Future<String?> sendMessage(String message): Sends a text message to the Gemini AI and returns the response.
+
+FILE: lib/mic_screen.dart
+-------------------------
+- void initState(): Initializes the animation controller for the ripple effect.
+- void dispose(): Disposes of the animation controller.
+- void _stopListening(): Navigates back from the mic screen.
+- Widget build(BuildContext context): Builds the voice listening UI with animated ripples.
+- Widget _buildRipple({required double scaleFactor, required double opacity, required bool isDark}): Helper function to build animated ripple rings.
+
+FILE: lib/screens/dashboard_screen.dart
+---------------------------------------
+- void _onItemTapped(int index): Handles navigation when a bottom navigation bar item is tapped.
+- Widget build(BuildContext context): Builds the main dashboard UI with action buttons, including the new "Send a ping" button for Appwrite.
+- Widget _buildDashboardButton({...}): Helper function to build consistent action buttons on the dashboard.
+
+FILE: lib/services/appwrite_service.dart
+----------------------------------------
+- Client client: Global Appwrite client instance configured with project ID "69dbcfd4000f59260ab6" and endpoint "https://sgp.cloud.appwrite.io/v1".
+
+FILE: lib/screens/chat/chat_screen.dart
+---------------------------------------
+- void _sendMessage() async: Handles sending a user message, updating the UI, and getting a response from Gemini AI.
+- void _scrollToBottom(): Automatically scrolls the chat list to the latest message.
+- Widget build(BuildContext context): Builds the chat interface including the message list and input area.
+- Widget build(BuildContext context) (in _ChatBubble): Builds individual chat bubbles for user and AI messages.
+- Widget build(BuildContext context) (in _TypingIndicator): Builds a simple "AIVA is thinking" indicator.
+
+FILE: lib/screens/auth/login_screen.dart
+----------------------------------------
+- void dispose(): Disposes of text controllers.
+- void _handleLogin(): Validates input and calls AuthService to log the user in.
+- Widget build(BuildContext context): Builds the login screen UI.
+
+FILE: lib/screens/auth/signup_screen.dart
+-----------------------------------------
+- void dispose(): Disposes of text controllers.
+- Future<void> _handleSignUp(): Validates input and calls AuthService to create a new user.
+- Widget build(BuildContext context): Builds the signup screen UI.
+- Widget _buildTextField({...}): Helper function to build styled text input fields.
+
+FILE: lib/screens/settings_screen.dart
+--------------------------------------
+- void _handleLogout() async: Shows a confirmation dialog and signs the user out.
+- void _showLanguageSelector(): Displays a bottom sheet to select the application language.
+- void _showChangePasswordDialog(): Displays a dialog to re-authenticate and update the user's password.
+- Widget build(BuildContext context): Builds the settings menu with various options.
+- Widget _buildAestheticTextField(...): Helper for dialog text fields.
+- Widget _buildSettingsTile(...): Helper for standard settings rows.
+- Widget _buildSwitchTile(...): Helper for settings rows with a toggle switch.
+
+FILE: lib/screens/profile_screen.dart
+-------------------------------------
+- Widget build(BuildContext context): Builds the user profile screen.
+- Widget _buildProfileOption({...}): Helper function to build profile action tiles.
+
+FILE: lib/screens/history_screen.dart
+-------------------------------------
+- Widget build(BuildContext context): Builds the activity history screen.
+- Widget _buildHistoryCard({...}): Helper function to build individual history list items.
+
+FILE: lib/screens/help_center_screen.dart
+-----------------------------------------
+- Future<void> _launchEmailSupport(BuildContext context): Launches the device's email app to contact support.
+- Widget build(BuildContext context): Builds the Help Center UI with FAQs.
+- Widget _buildFaqCard(BuildContext context, String question, String answer): Helper for expandable FAQ items.
+
+FILE: lib/screens/about_aiva_screen.dart
+----------------------------------------
+- Widget build(BuildContext context): Builds the About screen with app info and tech stack.
+- Widget _buildTechTile(BuildContext context, IconData icon, String title, String subtitle, bool isDark): Helper for technology info cards.
+
+FILE: lib/screens/privacy_policy_screen.dart
+--------------------------------------------
+- Widget build(BuildContext context): Builds the Privacy Policy screen.
+- Widget _buildPolicySection(BuildContext context, {...}): Helper for policy content sections.
+
+FILE: lib/screens/splash/splash_screen.dart
+-------------------------------------------
+- void initState(): Lifecycle method (currently optional timer commented out).
+- Widget build(BuildContext context): Builds the initial splash screen with a "Get Started" button.
+
+FILE: lib/widgets/typing_indicator.dart
+---------------------------------------
+- void initState(): Sets up the animation loop for the typing indicator dots.
+- void dispose(): Disposes of the animation controller to free resources.
+- Widget build(BuildContext context): Builds the stylized chat bubble container for the indicator.
+- Widget _buildDot(int index): Helper function that creates and animates an individual bouncing dot using a Sine wave.

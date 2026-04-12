@@ -5,8 +5,6 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // This is the line that lets Android "see" the Google Services plugin
-        classpath("com.google.gms:google-services:4.4.4")
     }
 }
 

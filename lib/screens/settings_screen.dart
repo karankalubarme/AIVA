@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/appwrite_auth_service.dart';
+import '../../services/appwrite_service.dart';
 import '../../theme_manager.dart';
 
 // ✅ Imported All Support Screens
@@ -48,7 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirm == true) {
-      await FirebaseAuth.instance.signOut();
+      await AppwriteAuthService().signOut();
       if (mounted) {
         Navigator.popUntil(context, (route) => route.isFirst);
       }
@@ -196,24 +197,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }
 
                           try {
-                            User? user = FirebaseAuth.instance.currentUser;
-                            String email = user?.email ?? "";
-
-                            AuthCredential credential = EmailAuthProvider.credential(
-                              email: email,
-                              password: currentPassController.text,
+                            // Password change in Appwrite requires more steps or a specific method
+                            // For now, let's show a placeholder or implement if Appwrite SDK supports it easily
+                            // Typically: account.updatePassword(password: 'new_password', oldPassword: 'old_password')
+                            
+                            await AppwriteService.account.updatePassword(
+                              password: newPassController.text,
+                              oldPassword: currentPassController.text,
                             );
-
-                            await user?.reauthenticateWithCredential(credential);
-                            await user?.updatePassword(newPassController.text);
 
                             if (mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password Changed Successfully!"), backgroundColor: Colors.green));
                             }
-                          } on FirebaseAuthException catch (e) {
+                          } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${e.message}"), backgroundColor: Colors.red));
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red));
                             }
                           }
                         },

@@ -90,7 +90,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             context,
             icon: Icons.api_rounded,
             title: "3. Third-Party Services",
-            content: "AIVA utilizes Google's Gemini AI to process text and generate responses, and Firebase for secure authentication and database storage. We do not sell your personal data to third parties.",
+            content: "AIVA utilizes Google's Gemini AI to process text and generate responses, and Appwrite for secure authentication and database storage. We do not sell your personal data to third parties.",
           ),
           _buildPolicySection(
             context,

@@ -1,7 +1,33 @@
 import 'package:flutter/material.dart';
+import '../services/appwrite_auth_service.dart';
+import 'package:appwrite/models.dart' as models;
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  models.User? _currentUser;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await AppwriteAuthService().getCurrentUser();
+    if (mounted) {
+      setState(() {
+        _currentUser = user;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +60,9 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
+          child: _isLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 20),
@@ -108,7 +136,7 @@ class ProfileScreen extends StatelessWidget {
 
                 // User Info
                 Text(
-                  "John Doe",
+                  _currentUser?.name ?? "Guest User",
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -116,7 +144,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "johndoe@email.com",
+                  _currentUser?.email ?? "no-email@example.com",
                   style: TextStyle(
                     fontSize: 16,
                     color: subTextColor, // ✅ Adaptive
@@ -166,9 +194,12 @@ class ProfileScreen extends StatelessWidget {
 
                       // Log Out Button
                       GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamedAndRemoveUntil(
-                              context, '/login', (route) => false);
+                        onTap: () async {
+                          await AppwriteAuthService().signOut();
+                          if (mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                                context, '/login', (route) => false);
+                          }
                         },
                         child: Container(
                           width: double.infinity,

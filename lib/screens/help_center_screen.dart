@@ -75,7 +75,7 @@ class HelpCenterScreen extends StatelessWidget {
           _buildFaqCard(
             context,
             'Is my data private?',
-            'Yes. We use Firebase Authentication and secure databases to ensure your conversation history remains completely private.',
+            'Yes. We use Appwrite Authentication and secure databases to ensure your conversation history remains completely private.',
           ),
 
           const SizedBox(height: 32),

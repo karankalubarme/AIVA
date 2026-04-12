@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'services/appwrite_auth_service.dart';
+import 'package:appwrite/models.dart' as models;
 
 // ✅ Theme Manager
 import 'theme_manager.dart';
@@ -18,8 +18,6 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-
   runApp(const AivaApp());
 }
 
@@ -70,13 +68,13 @@ class AivaApp extends StatelessWidget {
           ),
 
           // Persistent Login Logic
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
+          home: FutureBuilder<bool>(
+            future: AppwriteAuthService().isLoggedIn(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const SplashScreen();
               }
-              if (snapshot.hasData) {
+              if (snapshot.hasData && snapshot.data == true) {
                 return const DashboardScreen();
               }
               return const LoginScreen();
