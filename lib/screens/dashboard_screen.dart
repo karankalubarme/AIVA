@@ -8,17 +8,15 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _selectedIndex = 0; // For Bottom Navigation
+  int _selectedIndex = 0;
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
 
-    // Navigation Logic for Bottom Bar
     switch (index) {
       case 0:
-      // Already on Home
         break;
       case 1:
         Navigator.pushNamed(context, '/mic');
@@ -34,20 +32,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌙 1. CHECK FOR DARK MODE
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 🌙 2. DEFINE ADAPTIVE COLORS
     final textColor = isDark ? Colors.white : Colors.black87;
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final iconBgColor = isDark ? const Color(0xFF333333) : const Color(0xFFE0F7FA);
+    final iconBgColor =
+    isDark ? const Color(0xFF333333) : const Color(0xFFE0F7FA);
 
     return Scaffold(
       extendBody: true,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // 🌙 3. ADAPTIVE BACKGROUND (Gradient for Light, Solid Dark for Dark)
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF121212) : null,
           gradient: isDark
@@ -56,9 +52,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFE0F7FA), // Very Light Cyan
-              Color(0xFFB2EBF2), // Light Cyan
-              Color(0xFF80DEEA), // Cyan
+              Color(0xFFE0F7FA),
+              Color(0xFFB2EBF2),
+              Color(0xFF80DEEA),
             ],
           ),
         ),
@@ -74,32 +70,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'assets/images/logo1.png',
                   height: 80,
                 ),
+
                 const SizedBox(height: 10),
+
                 Text(
                   "AIVA",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
-                    color: textColor, // ✅ Adaptive Text Color
+                    color: textColor,
                   ),
                 ),
 
                 const SizedBox(height: 40),
 
-                // Welcome Text
                 const Text(
                   "Welcome, User!",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF26C6DA), // Keep Cyan branding
+                    color: Color(0xFF26C6DA),
                   ),
                 ),
 
                 const SizedBox(height: 50),
 
-                // 🌙 4. UPDATED BUTTONS (Pass colors)
+                // Chat Button
                 _buildDashboardButton(
                   icon: Icons.chat_bubble_outline,
                   text: "Chat with AIVA",
@@ -114,6 +111,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 const SizedBox(height: 25),
 
+                // ✅ Engineering Hub Button (ADDED HERE)
+                _buildDashboardButton(
+                  icon: Icons.engineering,
+                  text: "Engineering Hub",
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  iconBgColor: iconBgColor,
+                  isDark: isDark,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/engineeringHub');
+                  },
+                ),
+
+                const SizedBox(height: 25),
+
+                // Settings Button
                 _buildDashboardButton(
                   icon: Icons.settings_outlined,
                   text: "Settings",
@@ -133,11 +146,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
 
-      // 🌙 5. ADAPTIVE BOTTOM NAVIGATION BAR
+      // Bottom Navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: cardColor, // ✅ Adaptive Background
+          color: cardColor,
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
@@ -150,9 +163,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(30),
           child: BottomNavigationBar(
-            backgroundColor: cardColor, // ✅ Adaptive Background
+            backgroundColor: cardColor,
             selectedItemColor: const Color(0xFF26C6DA),
-            unselectedItemColor: isDark ? Colors.grey : Colors.grey.withOpacity(0.5),
+            unselectedItemColor:
+            isDark ? Colors.grey : Colors.grey.withOpacity(0.5),
             showSelectedLabels: false,
             showUnselectedLabels: false,
             type: BottomNavigationBarType.fixed,
@@ -174,7 +188,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- Helper Widget for Dashboard Buttons ---
   Widget _buildDashboardButton({
     required IconData icon,
     required String text,
@@ -191,13 +204,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         height: 80,
         padding: const EdgeInsets.symmetric(horizontal: 25),
         decoration: BoxDecoration(
-          color: cardColor, // ✅ Adaptive Card Color
+          color: cardColor,
           borderRadius: BorderRadius.circular(20),
-          // Add border for Dark Mode visibility
           border: Border.all(
               color: isDark ? const Color(0xFF333333) : Colors.white,
-              width: 2
-          ),
+              width: 2),
           boxShadow: [
             BoxShadow(
               color: isDark
@@ -213,10 +224,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconBgColor, // ✅ Adaptive Icon Background
+                color: iconBgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: const Color(0xFF00ACC1), size: 28),
+              child:
+              Icon(icon, color: const Color(0xFF00ACC1), size: 28),
             ),
             const SizedBox(width: 20),
             Text(
@@ -224,7 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: textColor, // ✅ Adaptive Text Color
+                color: textColor,
               ),
             ),
           ],

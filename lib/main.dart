@@ -17,7 +17,7 @@ import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/calculator_screen.dart';
 import 'screens/engineering_hub_screen.dart';
-import 'screens/coding_assistant_screen.dart';
+
 import 'screens/ocr_screen.dart';
 import 'screens/study_planner_screen.dart';
 import 'screens/reminder_screen.dart';
@@ -103,7 +103,7 @@ class AivaApp extends StatelessWidget {
             '/settings': (context) => const SettingsScreen(),
             '/engineeringHub': (context) => EngineeringHubScreen(),
             '/calculator': (context) => CalculatorScreen(),
-            '/coding': (context) => CodingAssistantScreen(),
+            //'/coding': (context) => CodingAssistantScreen(),
             '/ocr': (context) => OCRScreen(),
             '/planner': (context) => StudyPlannerScreen(),
             '/reminder': (context) => ReminderScreen(),
