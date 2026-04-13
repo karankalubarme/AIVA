@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/appwrite_auth_service.dart';
+import '../services/appwrite_auth_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -11,6 +11,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   String _userName = "User";
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -19,10 +20,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final user = await AppwriteAuthService().getCurrentUser();
-    if (user != null && user.name.isNotEmpty) {
+    final authService = AppwriteAuthService();
+    final user = await authService.getCurrentUser();
+    if (user != null) {
       setState(() {
         _userName = user.name;
+        if (user.prefs.data.containsKey('profile_id')) {
+          _profileImageUrl = authService.getProfileImageUrl(user.prefs.data['profile_id']);
+        }
       });
     }
   }
@@ -104,9 +109,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/profile'),
+                    onTap: () async {
+                      final result = await Navigator.pushNamed(context, '/profile');
+                      if (result == true) {
+                        _loadUserData();
+                      }
+                    },
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0F7FA),
                         shape: BoxShape.circle,
@@ -118,7 +128,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           )
                         ],
                       ),
-                      child: const Icon(Icons.person_outline, color: Color(0xFF00ACC1), size: 28),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.transparent,
+                        backgroundImage: _profileImageUrl != null ? NetworkImage(_profileImageUrl!) : null,
+                        child: _profileImageUrl == null 
+                          ? const Icon(Icons.person_outline, color: Color(0xFF00ACC1), size: 28)
+                          : null,
+                      ),
                     ),
                   ),
                 ],
@@ -214,6 +231,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
 
               // Action Buttons
+              _buildActionCard(
+                icon: Icons.engineering,
+                title: "Engineering Hub",
+                subtitle: "Tools & Study Material",
+                color: const Color(0xFFE0F7FA),
+                iconColor: const Color(0xFF00ACC1),
+                onTap: () => Navigator.pushNamed(context, '/engineeringHub'),
+                isDark: isDark,
+              ),
+
+              const SizedBox(height: 16),
+
               _buildActionCard(
                 icon: Icons.chat_bubble,
                 title: "Chat with AIVA",

@@ -53,51 +53,49 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   void calculateResult() {
     try {
+      if (input.isEmpty) return;
+      
       String exp = input
           .replaceAll("×", "*")
           .replaceAll("÷", "/");
 
-      Parser p = Parser();
-      Expression expression = p.parse(exp);
-      ContextModel cm = ContextModel();
-
-      double eval = expression.evaluate(EvaluationType.REAL, cm);
-
-      // Handle trig manually
-      if (input.contains("sin") ||
-          input.contains("cos") ||
-          input.contains("tan")) {
-        eval = handleTrig(input);
+      // Replace √ with sqrt
+      exp = exp.replaceAll("√", "sqrt");
+      
+      // If degree mode, convert trig arguments from degrees to radians
+      if (isDegree) {
+        exp = exp.replaceAllMapped(RegExp(r'(sin|cos|tan)\(([^)]+)\)'), (match) {
+          return '${match.group(1)}((${match.group(2)}) * ${pi / 180})';
+        });
       }
 
-      result = formatResult(eval);
+      final p = Parser();
+      final expression = p.parse(exp);
+      final cm = ContextModel();
+
+      final eval = expression.evaluate(EvaluationType.REAL, cm);
+
+      setState(() {
+        result = formatResult(eval);
+      });
     } catch (e) {
-      result = "Error";
+      setState(() {
+        result = "Error";
+      });
     }
-  }
-
-  double handleTrig(String expr) {
-    RegExp reg = RegExp(r'(sin|cos|tan)\(([^)]+)\)');
-    var match = reg.firstMatch(expr);
-
-    if (match != null) {
-      String func = match.group(1)!;
-      double val = double.parse(match.group(2)!);
-
-      if (isDegree) val = val * pi / 180;
-
-      if (func == "sin") return sin(val);
-      if (func == "cos") return cos(val);
-      return tan(val);
-    }
-    return 0;
   }
 
   String formatResult(double val) {
+    if (val.isInfinite || val.isNaN) return "Error";
     if (val % 1 == 0) {
       return val.toInt().toString();
     } else {
-      return val.toStringAsFixed(6);
+      // Remove trailing zeros for cleaner display
+      String s = val.toStringAsFixed(8);
+      while (s.contains('.') && (s.endsWith('0') || s.endsWith('.'))) {
+        s = s.substring(0, s.length - 1);
+      }
+      return s;
     }
   }
 

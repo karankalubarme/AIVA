@@ -23,7 +23,7 @@ class BranchScreen extends StatelessWidget {
             title: Text(branches[index]),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
-              Navigator.pushNamed(context, '/subjects');
+              Navigator.pushNamed(context, '/year');
             },
           );
         },

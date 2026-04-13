@@ -45,23 +45,34 @@ class _OCRScreenState extends State<OCRScreen> {
 
   // 🔍 OCR
   Future<void> extractText() async {
+    if (imageFile == null) return;
+
     setState(() {
       isLoading = true;
       extractedText = "";
     });
 
-    final textRecognizer = TextRecognizer();
-    final inputImage = InputImage.fromFile(imageFile!);
+    try {
+      final textRecognizer = TextRecognizer();
+      final inputImage = InputImage.fromFile(imageFile!);
 
-    final recognizedText =
-    await textRecognizer.processImage(inputImage);
+      final recognizedText = await textRecognizer.processImage(inputImage);
 
-    setState(() {
-      extractedText = recognizedText.text;
-      isLoading = false;
-    });
+      setState(() {
+        extractedText = recognizedText.text.trim();
+        if (extractedText.isEmpty) {
+          extractedText = "No text detected in this image.";
+        }
+        isLoading = false;
+      });
 
-    textRecognizer.close();
+      await textRecognizer.close();
+    } catch (e) {
+      setState(() {
+        extractedText = "Error during text recognition: $e";
+        isLoading = false;
+      });
+    }
   }
 
   @override

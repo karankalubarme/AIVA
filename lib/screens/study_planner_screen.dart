@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/appwrite_data_service.dart';
+import 'package:appwrite/models.dart' as models;
 
 class StudyPlannerScreen extends StatefulWidget {
   const StudyPlannerScreen({super.key});
@@ -8,84 +10,99 @@ class StudyPlannerScreen extends StatefulWidget {
 }
 
 class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
+  final AppwriteDataService _dataService = AppwriteDataService();
   List<Map<String, dynamic>> tasks = [];
   List<Map<String, dynamic>> filteredTasks = [];
+  bool isLoading = false;
 
   final TextEditingController controller = TextEditingController();
   final TextEditingController searchController = TextEditingController();
 
   DateTime selectedDate = DateTime.now();
-  String selectedPriority = "Medium";
 
-  // 📅 Pick Date
-  Future<void> pickDate() async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
 
-    if (picked != null) {
-      setState(() {
-        selectedDate = picked;
-        filterTasks();
-      });
+  Future<void> _loadTasks() async {
+    if (!mounted) return;
+    setState(() => isLoading = true);
+    try {
+      final docs = await _dataService.getTasks();
+      if (mounted) {
+        setState(() {
+          tasks = docs.map((doc) {
+            final data = Map<String, dynamic>.from(doc.data);
+            data['id'] = doc.$id;
+            return data;
+          }).toList();
+          isLoading = false;
+          filterTasks();
+        });
+      }
+    } catch (e) {
+      print("Error loading tasks: $e");
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   // ➕ Add Task
-  void addTask() {
+  Future<void> addTask() async {
     if (controller.text.isEmpty) return;
 
-    setState(() {
-      tasks.add({
-        "title": controller.text,
-        "date": selectedDate,
-        "done": false,
-        "priority": selectedPriority
-      });
+    final newTaskData = {
+      "title": controller.text,
+      "IsComplited": false, // Exact match to your Console: "IsComplited"
+    };
+
+    final doc = await _dataService.addTask(newTaskData);
+    if (doc != null) {
       controller.clear();
-      filterTasks();
-    });
+      _loadTasks();
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Error: Check Permissions & ensure 'userId' is Indexed in Console"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  // 🔍 Filter by Date
   void filterTasks() {
-    filteredTasks = tasks.where((task) {
-      return task["date"].toString().split(' ')[0] ==
-          selectedDate.toString().split(' ')[0];
-    }).toList();
-    setState(() {});
-  }
-
-  // 🔎 Search
-  void searchTasks(String query) {
-    filteredTasks = tasks.where((task) {
-      return task["title"]
-          .toLowerCase()
-          .contains(query.toLowerCase());
-    }).toList();
-    setState(() {});
-  }
-
-  // ❌ Delete
-  void deleteTask(int index) {
-    tasks.remove(filteredTasks[index]);
-    filterTasks();
-  }
-
-  // ✔ Toggle
-  void toggleTask(int index) {
     setState(() {
-      filteredTasks[index]["done"] =
-      !filteredTasks[index]["done"];
+      filteredTasks = tasks; 
     });
   }
 
-  // ✏️ Edit
-  void editTask(int index) {
-    controller.text = filteredTasks[index]["title"];
+  void searchTasks(String query) {
+    setState(() {
+      filteredTasks = tasks.where((task) {
+        return (task["title"] ?? "")
+            .toString()
+            .toLowerCase()
+            .contains(query.toLowerCase());
+      }).toList();
+    });
+  }
+
+  Future<void> deleteTask(String id) async {
+    await _dataService.deleteTask(id);
+    _loadTasks();
+  }
+
+  Future<void> toggleTask(Map<String, dynamic> task) async {
+    final bool currentStatus = task["IsComplited"] ?? false;
+    await _dataService.updateTask(task["id"], {"IsComplited": !currentStatus});
+    _loadTasks();
+  }
+
+  void editTask(Map<String, dynamic> task) {
+    controller.text = task["title"] ?? "";
 
     showDialog(
       context: context,
@@ -94,13 +111,13 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
         content: TextField(controller: controller),
         actions: [
           TextButton(
-            onPressed: () {
-              setState(() {
-                filteredTasks[index]["title"] =
-                    controller.text;
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                await _dataService.updateTask(task["id"], {"title": controller.text});
                 controller.clear();
-              });
-              Navigator.pop(context);
+                if (mounted) Navigator.pop(context);
+                _loadTasks();
+              }
             },
             child: const Text("Save"),
           )
@@ -109,34 +126,15 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
     );
   }
 
-  // 📊 Progress
   double getProgress() {
     if (filteredTasks.isEmpty) return 0;
-    int done = filteredTasks.where((t) => t["done"]).length;
+    int done = filteredTasks.where((t) => t["IsComplited"] == true).length;
     return done / filteredTasks.length;
-  }
-
-  Color getPriorityColor(String priority) {
-    switch (priority) {
-      case "High":
-        return Colors.red;
-      case "Medium":
-        return Colors.orange;
-      default:
-        return Colors.green;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    filterTasks();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final textColor = isDark ? Colors.white : Colors.black87;
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
@@ -149,14 +147,8 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
       body: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF121212) : null,
-          gradient: isDark
-              ? null
-              : const LinearGradient(
-            colors: [
-              Color(0xFFE0F7FA),
-              Color(0xFFB2EBF2),
-              Color(0xFF80DEEA),
-            ],
+          gradient: isDark ? null : const LinearGradient(
+            colors: [Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFF80DEEA)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -164,15 +156,11 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-
-            // 🔍 SEARCH
+            // Search
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 15),
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(15),
-              ),
+              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
               child: TextField(
                 controller: searchController,
                 onChanged: searchTasks,
@@ -183,164 +171,76 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // 📅 DATE + PROGRESS
+            // Progress
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 15),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(15),
-              ),
+              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
               child: Column(
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today,
-                          color: Color(0xFF26C6DA)),
+                      const Icon(Icons.calendar_today, color: Color(0xFF26C6DA)),
                       const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          selectedDate.toString().split(' ')[0],
-                          style: TextStyle(color: textColor),
-                        ),
-                      ),
-                      TextButton(
-                          onPressed: pickDate,
-                          child: const Text("Change")),
+                      Text(selectedDate.toString().split(' ')[0], style: TextStyle(color: textColor)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: getProgress(),
-                    minHeight: 8,
-                    color: const Color(0xFF26C6DA),
-                  ),
+                  LinearProgressIndicator(value: getProgress(), minHeight: 8, color: const Color(0xFF26C6DA)),
                 ],
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // ➕ ADD TASK
+            // Add Task
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 15),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Column(
+              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
+              child: Row(
                 children: [
-                  TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: "Enter task...",
-                      prefixIcon: Icon(Icons.edit),
-                      border: InputBorder.none,
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(hintText: "Enter task...", border: InputBorder.none),
                     ),
                   ),
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      const Text("Priority: "),
-                      DropdownButton<String>(
-                        value: selectedPriority,
-                        underline: const SizedBox(),
-                        items: ["High", "Medium", "Low"]
-                            .map((p) => DropdownMenuItem(
-                            value: p, child: Text(p)))
-                            .toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedPriority = val!;
-                          });
-                        },
-                      ),
-                      const Spacer(),
-                      ElevatedButton.icon(
-                        onPressed: addTask,
-                        icon: const Icon(Icons.add),
-                        label: const Text("Add"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                          const Color(0xFF26C6DA),
-                        ),
-                      )
-                    ],
+                  ElevatedButton(
+                    onPressed: addTask,
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF26C6DA)),
+                    child: const Icon(Icons.add, color: Colors.white),
                   )
                 ],
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // 📋 TASK LIST
+            // List
             Expanded(
-              child: filteredTasks.isEmpty
-                  ? const Center(child: Text("No tasks"))
+              child: isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : filteredTasks.isEmpty
+                  ? const Center(child: Text("No tasks found"))
                   : ListView.builder(
                 itemCount: filteredTasks.length,
                 itemBuilder: (context, index) {
                   final task = filteredTasks[index];
-
                   return Container(
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 6),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius:
-                      BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black
-                              .withOpacity(0.05),
-                          blurRadius: 6,
-                        )
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Checkbox(
-                          value: task["done"],
-                          onChanged: (_) =>
-                              toggleTask(index),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              Text(task["title"],
-                                  style: TextStyle(
-                                      fontWeight:
-                                      FontWeight.bold,
-                                      color: textColor)),
-                              Text(task["priority"],
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.circle,
-                            color: getPriorityColor(
-                                task["priority"]),
-                            size: 12),
-                        IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () =>
-                                editTask(index)),
-                        IconButton(
-                            icon: const Icon(Icons.delete,
-                                color: Colors.red),
-                            onPressed: () =>
-                                deleteTask(index)),
-                      ],
+                    margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
+                    child: ListTile(
+                      leading: Checkbox(
+                        value: task["IsComplited"] ?? false,
+                        onChanged: (_) => toggleTask(task),
+                      ),
+                      title: Text(task["title"] ?? "Untitled", style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: () => editTask(task)),
+                          IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 20), onPressed: () => deleteTask(task["id"])),
+                        ],
+                      ),
                     ),
                   );
                 },
