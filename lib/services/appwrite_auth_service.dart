@@ -5,10 +5,14 @@ import 'appwrite_service.dart';
 class AppwriteAuthService {
   final Account _account = AppwriteService.account;
   final Databases _databases = AppwriteService.databases;
+  final Storage _storage = Storage(AppwriteService.client);
 
-  // Replace with your actual database and collection IDs from Appwrite console
+  // Replace with your actual bucket ID from Appwrite console
+  // TODO: Replace this with your ACTUAL bucket ID from Appwrite Console > Storage
+  static const String bucketId = '69dc7d600039be7504af';
   static const String databaseId = '67baef1a00350a41d668'; 
   static const String collectionId = '67baef560018f29424e8';
+  static const String projectId = '69dbcfd4000f59260ab6';
 
   // 1. SIGN UP USER & SAVE DATA
   Future<String?> signUpUser({
@@ -65,6 +69,59 @@ class AppwriteAuthService {
     } catch (e) {
       return null;
     }
+  }
+
+  // 3b. UPDATE USER DATA
+  Future<String?> updateUserName(String name) async {
+    try {
+      await _account.updateName(name: name);
+      return null;
+    } on AppwriteException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> updateUserPassword(String password) async {
+    try {
+      await _account.updatePassword(password: password);
+      return null;
+    } on AppwriteException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  // 3c. UPDATE PROFILE PICTURE
+  Future<String?> uploadProfilePicture(String filePath) async {
+    try {
+      final user = await _account.get();
+      
+      // Upload file to bucket
+      final file = await _storage.createFile(
+        bucketId: bucketId,
+        fileId: ID.unique(),
+        file: InputFile.fromPath(path: filePath),
+      );
+
+      // Update user preferences or store in a separate collection.
+      // For simplicity, we can update user prefs with the file ID.
+      await _account.updatePrefs(prefs: {
+        'profile_id': file.$id,
+      });
+
+      return null;
+    } on AppwriteException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  String getProfileImageUrl(String fileId) {
+    return '${AppwriteService.client.endPoint}/storage/buckets/$bucketId/files/$fileId/view?project=$projectId';
   }
 
   // 4. SIGN OUT

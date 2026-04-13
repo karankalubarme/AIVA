@@ -12,6 +12,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   models.User? _currentUser;
   bool _isLoading = true;
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -20,11 +21,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final user = await AppwriteAuthService().getCurrentUser();
+    final authService = AppwriteAuthService();
+    final user = await authService.getCurrentUser();
     if (mounted) {
       setState(() {
         _currentUser = user;
         _isLoading = false;
+        if (user != null && user.prefs.data.containsKey('profile_id')) {
+          _profileImageUrl = authService.getProfileImageUrl(user.prefs.data['profile_id']);
+        }
       });
     }
   }
@@ -115,7 +120,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                         color: isDark ? const Color(0xFF1E1E1E) : Colors.white, // ✅ Adaptive
                       ),
-                      child: Icon(Icons.person, size: 60, color: isDark ? Colors.grey : Colors.grey),
+                      child: ClipOval(
+                        child: _profileImageUrl != null
+                            ? Image.network(
+                                _profileImageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.person, size: 60, color: Colors.grey),
+                              )
+                            : const Icon(Icons.person, size: 60, color: Colors.grey),
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -164,8 +178,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         isDark: isDark,
                         cardColor: cardColor,
                         textColor: textColor,
-                        onTap: () {
-                          // Edit Profile Logic
+                        onTap: () async {
+                          final result = await Navigator.pushNamed(context, '/edit-profile');
+                          if (result == true) {
+                            _loadUserData();
+                          }
                         },
                       ),
                       const SizedBox(height: 15),

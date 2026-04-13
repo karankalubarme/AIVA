@@ -12,6 +12,7 @@ import 'screens/auth/signup_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/chat/chat_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/edit_profile_screen.dart';
 import 'mic_screen.dart'; // Ensure this path matches your project structure
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
@@ -98,6 +99,7 @@ class AivaApp extends StatelessWidget {
             '/dashboard': (context) => const DashboardScreen(),
             '/chat': (context) => const ChatScreen(),
             '/profile': (context) => const ProfileScreen(),
+            '/edit-profile': (context) => const EditProfileScreen(),
             '/mic': (context) => const MicScreen(),
             '/history': (context) => const HistoryScreen(),
             '/settings': (context) => const SettingsScreen(),
