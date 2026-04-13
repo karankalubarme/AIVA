@@ -11,6 +11,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   String _userName = "User";
+  String? _profileImageUrl;
 
   @override
   void initState() {
@@ -19,10 +20,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final user = await AppwriteAuthService().getCurrentUser();
-    if (user != null && user.name.isNotEmpty) {
+    final authService = AppwriteAuthService();
+    final user = await authService.getCurrentUser();
+    if (user != null) {
       setState(() {
         _userName = user.name;
+        if (user.prefs.data.containsKey('profile_id')) {
+          _profileImageUrl = authService.getProfileImageUrl(user.prefs.data['profile_id']);
+        }
       });
     }
   }
@@ -104,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/profile'),
+                    onTap: () => _showProfilePopup(context, isDark, cardColor),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -118,7 +123,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           )
                         ],
                       ),
-                      child: const Icon(Icons.person_outline, color: Color(0xFF00ACC1), size: 28),
+                      child: _profileImageUrl != null 
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.network(_profileImageUrl!, width: 28, height: 28, fit: BoxFit.cover),
+                            )
+                          : const Icon(Icons.person_outline, color: Color(0xFF00ACC1), size: 28),
                     ),
                   ),
                 ],
@@ -243,6 +253,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     ),
       bottomNavigationBar: _buildBottomNav(isDark, cardColor),
+    );
+  }
+
+  void _showProfilePopup(BuildContext context, bool isDark, Color cardColor) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Center(
+          child: Hero(
+            tag: 'profile_avatar',
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
+                    )
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F7FA),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF00ACC1), width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        backgroundImage: _profileImageUrl != null ? NetworkImage(_profileImageUrl!) : null,
+                        child: _profileImageUrl == null ? const Icon(Icons.person, color: Color(0xFF00ACC1), size: 40) : null,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _userName,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "AIVA Assistant User",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/profile');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00ACC1),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text("View Full Profile"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
