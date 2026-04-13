@@ -15,6 +15,16 @@ import 'screens/profile_screen.dart';
 import 'mic_screen.dart'; // Ensure this path matches your project structure
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/calculator_screen.dart';
+import 'screens/engineering_hub_screen.dart';
+import 'screens/coding_assistant_screen.dart';
+import 'screens/ocr_screen.dart';
+import 'screens/study_planner_screen.dart';
+import 'screens/reminder_screen.dart';
+import 'screens/branch_screen.dart';
+import 'screens/year_screen.dart';
+import 'screens/subjects_screen.dart';
+import 'screens/sub_resources_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +101,16 @@ class AivaApp extends StatelessWidget {
             '/mic': (context) => const MicScreen(),
             '/history': (context) => const HistoryScreen(),
             '/settings': (context) => const SettingsScreen(),
+            '/engineeringHub': (context) => EngineeringHubScreen(),
+            '/calculator': (context) => CalculatorScreen(),
+            '/coding': (context) => CodingAssistantScreen(),
+            '/ocr': (context) => OCRScreen(),
+            '/planner': (context) => StudyPlannerScreen(),
+            '/reminder': (context) => ReminderScreen(),
+            '/branch': (context) => BranchScreen(),
+            '/year': (context) => YearScreen(),
+            '/subjects': (context) => SubjectsScreen(),
+            '/resources': (context) => ResourcesScreen(),
           },
         );
       },
