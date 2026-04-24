@@ -46,6 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final iconColor = isDark ? Colors.white70 : Colors.black54;
 
     return Scaffold(
+      extendBody: true, // Allows gradient to flow behind bottom nav
+      backgroundColor: Colors.transparent, // Prevents white gaps
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -77,10 +79,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back_ios, color: iconColor), // ✅ Adaptive
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                      // Only show back button if there is a page to go back to
+                      if (Navigator.canPop(context))
+                        IconButton(
+                          icon: Icon(Icons.arrow_back_ios, color: iconColor),
+                          onPressed: () => Navigator.pop(context),
+                        )
+                      else
+                        const SizedBox(width: 48), // Spacer to maintain alignment
                       const Spacer(),
                       Text(
                         "Profile",

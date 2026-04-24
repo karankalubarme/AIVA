@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:aiva/services/gemini_service.dart';
+import 'package:aiva/services/appwrite_data_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -13,13 +17,15 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Initialize the Gemini Service
+  // Initialize Services
   final GeminiService _geminiService = GeminiService();
+  final AppwriteDataService _dataService = AppwriteDataService();
+  final ImagePicker _picker = ImagePicker();
 
   final List<Map<String, dynamic>> _messages = [
     {
       'isUser': false,
-      'message': 'Hello! I am AIVA. How can I help you today?',
+      'message': 'Hello! I am **AIVA** ⚙️. How can I assist your engineering studies today?',
     },
   ];
 
@@ -39,13 +45,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Get Response from Gemini AI
     String? aiResponse = await _geminiService.sendMessage(userMessage);
+    final finalAiResponse = aiResponse ?? "Sorry, I am having trouble connecting 🔌.";
+
+    // Save to Appwrite History
+    await _dataService.saveChatMessage(userMessage, finalAiResponse);
 
     if (mounted) {
       setState(() {
         _isTyping = false;
         _messages.add({
           'isUser': false,
-          'message': aiResponse ?? "Sorry, I am having trouble connecting.",
+          'message': finalAiResponse,
         });
       });
       _scrollToBottom();
@@ -64,6 +74,109 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildAttachmentIcon(Icons.camera_alt_rounded, Colors.orange, () {
+              Navigator.pop(context);
+              _processImage(ImageSource.camera);
+            }),
+            _buildAttachmentIcon(Icons.image_rounded, Colors.purple, () {
+              Navigator.pop(context);
+              _processImage(ImageSource.gallery);
+            }),
+            _buildAttachmentIcon(Icons.link_rounded, Colors.blue, () {
+              Navigator.pop(context);
+              _showAddLinkDialog();
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _processImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source);
+    if (image == null) return;
+
+    setState(() => _isTyping = true);
+
+    try {
+      final inputImage = InputImage.fromFilePath(image.path);
+      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+      final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
+      
+      String scannedText = recognizedText.text.trim();
+      
+      if (scannedText.isNotEmpty) {
+        _messageController.text += " $scannedText ";
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No text detected in image")),
+        );
+      }
+      
+      textRecognizer.close();
+    } catch (e) {
+      print("OCR Error: $e");
+    } finally {
+      setState(() => _isTyping = false);
+    }
+  }
+
+  Widget _buildAttachmentIcon(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 30),
+      ),
+    );
+  }
+
+  void _showAddLinkDialog() {
+    final TextEditingController linkController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Add Web Link"),
+        content: TextField(
+          controller: linkController,
+          decoration: const InputDecoration(hintText: "https://example.com"),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () {
+              if (linkController.text.isNotEmpty) {
+                _messageController.text += " ${linkController.text} ";
+              }
+              Navigator.pop(context);
+            },
+            child: const Text("Add"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 🌙 1. DETECT DARK MODE
@@ -77,7 +190,6 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       body: Container(
         // 🌙 2. ADAPTIVE BACKGROUND
-        // Use Gradient for Light Mode, Solid Dark Grey for Dark Mode
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF121212) : null,
           gradient: isDark
@@ -106,7 +218,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: textColor // ✅ Adaptive Text
+                          color: textColor
                       ),
                     ),
                   ],
@@ -137,11 +249,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: inputBgColor, // ✅ Adaptive Input Background
+                  color: inputBgColor,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.05), // Darker shadow in dark mode
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -149,10 +261,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 child: Row(
                   children: [
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFF26C6DA)),
+                      onPressed: _showAttachmentOptions,
+                    ),
                     Expanded(
                       child: TextField(
                         controller: _messageController,
-                        style: TextStyle(color: textColor), // ✅ User typing color
+                        style: TextStyle(color: textColor),
                         decoration: InputDecoration(
                           hintText: "Ask me anything...",
                           hintStyle: TextStyle(color: isDark ? Colors.grey : Colors.black54),
@@ -193,16 +309,11 @@ class _ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🌙 Check Theme inside the bubble
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // AI Bubble Color: White (Light) vs Dark Grey (Dark)
-    // User Bubble Color: Always Cyan (looks good in both)
     final bubbleColor = isUser
         ? const Color(0xFF26C6DA)
         : (isDark ? const Color(0xFF1E1E1E) : Colors.white);
 
-    // Text Color: White (User) vs Adaptive (AI)
     final textColor = isUser
         ? Colors.white
         : (isDark ? Colors.white : Colors.black87);
@@ -210,11 +321,11 @@ class _ChatBubble extends StatelessWidget {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5),
+        margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
         decoration: BoxDecoration(
-          color: bubbleColor, // ✅ Adaptive Color
+          color: bubbleColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
@@ -229,13 +340,31 @@ class _ChatBubble extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(
-          message,
-          style: TextStyle(
-            color: textColor, // ✅ Adaptive Text
-            fontSize: 16,
-          ),
-        ),
+        child: isUser
+            ? Text(
+                message,
+                style: TextStyle(color: textColor, fontSize: 16),
+              )
+            : MarkdownBody(
+                data: message,
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(color: textColor, fontSize: 16),
+                  h1: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 20),
+                  h2: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
+                  h3: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                  strong: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+                  listBullet: TextStyle(color: textColor),
+                  code: TextStyle(
+                    backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                    color: isDark ? Colors.cyanAccent : Colors.teal,
+                    fontFamily: 'monospace',
+                  ),
+                  codeblockDecoration: BoxDecoration(
+                    color: isDark ? Colors.black26 : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -254,11 +383,11 @@ class _TypingIndicator extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 5),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white, // ✅ Adaptive
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Text(
-          "AIVA is thinking...",
+          "AIVA is analyzing... ⚙️",
           style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
         ),
       ),

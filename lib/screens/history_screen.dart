@@ -1,202 +1,248 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:appwrite/models.dart' as models;
+import '../services/appwrite_data_service.dart';
+import 'package:intl/intl.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> with SingleTickerProviderStateMixin {
+  final AppwriteDataService _dataService = AppwriteDataService();
+  late TabController _tabController;
+  
+  List<models.Document> _ocrHistory = [];
+  List<models.Document> _chatHistory = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this, initialIndex: 1);
+    _loadAllHistory();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAllHistory() async {
+    setState(() => _isLoading = true);
+    final ocr = await _dataService.getOCRHistory();
+    final chat = await _dataService.getChatHistory();
+    setState(() {
+      _ocrHistory = ocr;
+      _chatHistory = chat;
+      _isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 🌙 1. DETECT DARK MODE
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // 🌙 2. DEFINE ADAPTIVE COLORS
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final subTextColor = isDark ? Colors.white70 : Colors.grey[600];
-    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final iconColor = isDark ? Colors.white : Colors.black54;
-
-    // Dummy Data for History
-    final List<Map<String, dynamic>> historyItems = [
-      {
-        "title": "Flutter Project Ideas",
-        "date": "Today, 10:30 AM",
-        "type": "chat",
-      },
-      {
-        "title": "Weather in Pune",
-        "date": "Yesterday",
-        "type": "voice",
-      },
-      {
-        "title": "Recipe for Pasta",
-        "date": "Feb 8",
-        "type": "chat",
-      },
-      {
-        "title": "Explain Quantum Physics",
-        "date": "Feb 5",
-        "type": "voice",
-      },
-      {
-        "title": "Email Draft for Boss",
-        "date": "Jan 28",
-        "type": "chat",
-      },
-    ];
-
+    
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text("History"),
         centerTitle: true,
-        title: Text(
-          "History",
-          style: TextStyle(
-            color: textColor, // ✅ Adaptive
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: iconColor), // ✅ Adaptive
-          onPressed: () => Navigator.pop(context),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAllHistory),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFF00ACC1),
+          labelColor: const Color(0xFF00ACC1),
+          unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
+          tabs: const [
+            Tab(icon: Icon(Icons.document_scanner), text: "OCR"),
+            Tab(icon: Icon(Icons.chat_bubble_outline), text: "Chat"),
+          ],
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        // 🌙 3. ADAPTIVE BACKGROUND
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF121212) : null,
-          gradient: isDark
-              ? null
-              : const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFE0F7FA), // Very Light Cyan
-              Color(0xFFB2EBF2), // Light Cyan
-              Color(0xFF80DEEA), // Cyan
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOCRList(isDark),
+                _buildChatList(isDark),
+              ],
+            ),
+    );
+  }
 
-              // 🌙 4. ADAPTIVE SEARCH BAR
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white.withOpacity(0.9), // ✅ Adaptive
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  style: TextStyle(color: textColor), // ✅ Typing Color
-                  decoration: InputDecoration(
-                    hintText: "Search history...",
-                    hintStyle: TextStyle(color: isDark ? Colors.grey : Colors.black54),
-                    border: InputBorder.none,
-                    icon: const Icon(Icons.search, color: Colors.grey),
-                  ),
-                ),
-              ),
+  Widget _buildOCRList(bool isDark) {
+    if (_ocrHistory.isEmpty) return _buildEmptyState("No OCR history found", Icons.document_scanner);
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _ocrHistory.length,
+      itemBuilder: (context, index) => _buildHistoryItem(_ocrHistory[index], isDark, "OCR"),
+    );
+  }
 
-              const SizedBox(height: 20),
+  Widget _buildChatList(bool isDark) {
+    if (_chatHistory.isEmpty) return _buildEmptyState("No Chat history found", Icons.chat_bubble_outline);
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _chatHistory.length,
+      itemBuilder: (context, index) => _buildHistoryItem(_chatHistory[index], isDark, "Chat"),
+    );
+  }
 
-              // History List
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: historyItems.length,
-                  itemBuilder: (context, index) {
-                    final item = historyItems[index];
-                    return _buildHistoryCard(
-                      title: item['title'],
-                      date: item['date'],
-                      type: item['type'],
-                      isDark: isDark,          // Pass Theme State
-                      cardColor: cardColor,    // Pass Colors
-                      textColor: textColor,
-                      subTextColor: subTextColor!,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(message, style: TextStyle(color: Colors.grey[600], fontSize: 18)),
+        ],
       ),
     );
   }
 
-  // --- Helper Widget for History Cards ---
-  Widget _buildHistoryCard({
-    required String title,
-    required String date,
-    required String type,
-    required bool isDark,
-    required Color cardColor,
-    required Color textColor,
-    required Color subTextColor,
-  }) {
-    bool isVoice = type == 'voice';
+  Widget _buildHistoryItem(models.Document item, bool isDark, String type) {
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    
+    String title = "";
+    String subtitleText = "";
+    
+    if (type == "OCR") {
+      title = item.data['text'] ?? "No text";
+    } else {
+      title = item.data['message'] ?? "No message";
+      subtitleText = item.data['response'] ?? "No response";
+    }
+
+    final String timestampStr = item.data['timestamp'] ?? "";
+    DateTime? timestamp = timestampStr.isNotEmpty ? DateTime.tryParse(timestampStr) : null;
+    final formattedDate = timestamp != null 
+      ? DateFormat('dd MMM yyyy, hh:mm a').format(timestamp)
+      : "Unknown date";
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: cardColor, // ✅ Adaptive Background
-        borderRadius: BorderRadius.circular(20),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          ),
+          )
         ],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            // ✅ Adaptive Icon Background (Darker in Dark Mode)
-            color: isVoice
-                ? (isDark ? Colors.blue.withOpacity(0.2) : const Color(0xFFE1F5FE))
-                : (isDark ? const Color(0xFF26C6DA).withOpacity(0.2) : const Color(0xFFE0F2F1)),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            isVoice ? Icons.mic : Icons.chat_bubble_outline,
-            color: isVoice ? Colors.blue : const Color(0xFF26C6DA),
-          ),
-        ),
+        contentPadding: const EdgeInsets.all(16),
         title: Text(
           title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: textColor, // ✅ Adaptive Text
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
         ),
-        subtitle: Text(
-          date,
-          style: TextStyle(color: subTextColor, fontSize: 13), // ✅ Adaptive Subtext
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (subtitleText.isNotEmpty)
+              Text(
+                subtitleText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              formattedDate,
+              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+            ),
+          ],
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        trailing: const Icon(Icons.chevron_right, color: Color(0xFF00ACC1)),
         onTap: () {
-          // Navigate to chat detail
+          if (type == "OCR") {
+            _showOCRDetails(title, formattedDate);
+          } else {
+            _showChatDetails(title, subtitleText, formattedDate);
+          }
         },
       ),
+    );
+  }
+
+  void _showOCRDetails(String text, String date) {
+    _showDetailsSheet("OCR Details", date, text);
+  }
+
+  void _showChatDetails(String msg, String resp, String date) {
+    _showDetailsSheet("Chat Details", date, "User: $msg\n\nAIVA: $resp");
+  }
+
+  void _showDetailsSheet(String title, String date, String content) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              const Divider(),
+              Text("Date: $date", style: TextStyle(color: Colors.grey[600])),
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(content, style: const TextStyle(fontSize: 16, height: 1.5)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: content)).then((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Content copied to clipboard"),
+                        backgroundColor: Color(0xFF00ACC1),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    Navigator.pop(context);
+                  });
+                },
+                icon: const Icon(Icons.copy),
+                label: const Text("Copy Content"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00ACC1),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

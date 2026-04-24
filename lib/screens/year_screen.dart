@@ -5,6 +5,10 @@ class YearScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get branch from arguments
+    final Map<String, dynamic> args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final String branch = args['branch'];
+
     final years = [
       "First Year (FE)",
       "Second Year (SE)",
@@ -13,7 +17,7 @@ class YearScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Select Year")),
+      appBar: AppBar(title: Text("Select Year - $branch")),
       body: ListView.builder(
         itemCount: years.length,
         itemBuilder: (context, index) {
@@ -21,7 +25,14 @@ class YearScreen extends StatelessWidget {
             title: Text(years[index]),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
-              Navigator.pushNamed(context, '/subjects');
+              Navigator.pushNamed(
+                context,
+                '/subjects',
+                arguments: {
+                  'branch': branch,
+                  'year': years[index],
+                },
+              );
             },
           );
         },

@@ -8,14 +8,15 @@ class EngineeringHubScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final textColor = isDark ? Colors.white : Colors.black87;
-    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF80DEEA) : Colors.white;
     final iconBgColor =
     isDark ? const Color(0xFF333333) : const Color(0xFFE0F7FA);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Engineering Hub"),
+        title: const Text("Engineering Tools"),
         centerTitle: true,
+        backgroundColor:Color(0xFFE0F7FA) ,
         elevation: 0,
       ),
       body: Container(

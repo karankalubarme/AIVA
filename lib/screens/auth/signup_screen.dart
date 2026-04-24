@@ -129,15 +129,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     height: 100,
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    "AIVA",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                      letterSpacing: 2,
-                    ),
-                  ),
+
 
                   const SizedBox(height: 40),
 

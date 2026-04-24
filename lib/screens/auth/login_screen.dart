@@ -14,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passController = TextEditingController();
 
   bool _isLoading = false; // For loading spinner
+  bool _obscurePassword = true; // For password visibility toggle
 
   @override
   void dispose() {
@@ -56,6 +57,50 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacementNamed(context, '/dashboard');
     } else {
       // FAILURE: Show Error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  // --- FORGOT PASSWORD LOGIC ---
+  void _handleForgotPassword() async {
+    String email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter your email address to reset password"),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    // Start Loading
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Call Appwrite Reset Service
+    String? result = await AppwriteAuthService().requestPasswordReset(email);
+
+    // Stop Loading
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password reset link sent to your email!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result),
@@ -160,9 +205,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: TextField(
                       controller: _passController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF26C6DA)),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: const Color(0xFF26C6DA),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                         hintText: "Password",
                         hintStyle: TextStyle(color: Colors.grey[500]),
                         border: InputBorder.none,
@@ -177,9 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // Add Forgot Password logic later
-                      },
+                      onPressed: _handleForgotPassword, // <--- Link to logic
                       child: const Text(
                         "Forgot Password?",
                         style: TextStyle(color: Color(0xFF00ACC1)),

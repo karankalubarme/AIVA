@@ -142,4 +142,42 @@ class AppwriteAuthService {
       return false;
     }
   }
+
+  // 5. RESET PASSWORD
+  Future<String?> requestPasswordReset(String email) async {
+    try {
+      // Create a password recovery request
+      // This will send an email to the user with a recovery link.
+      // Note: The URL must be a valid domain or deep link allowed in Appwrite Console
+      await _account.createRecovery(
+        email: email,
+        url: 'https://aiva-engineering.web.app/reset-password', 
+      );
+      return null; // Success
+    } on AppwriteException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  // 6. CONFIRM PASSWORD RESET (Used after user clicks email link)
+  Future<String?> confirmPasswordReset({
+    required String userId,
+    required String secret,
+    required String newPassword,
+  }) async {
+    try {
+      await _account.updateRecovery(
+        userId: userId,
+        secret: secret,
+        password: newPassword,
+      );
+      return null; // Success
+    } on AppwriteException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    }
+  }
 }

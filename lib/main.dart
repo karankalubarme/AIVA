@@ -26,6 +26,7 @@ import 'screens/branch_screen.dart';
 import 'screens/year_screen.dart';
 import 'screens/subjects_screen.dart';
 import 'screens/sub_resources_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,6 +114,13 @@ class AivaApp extends StatelessWidget {
             '/year': (context) => YearScreen(),
             '/subjects': (context) => SubjectsScreen(),
             '/resources': (context) => ResourcesScreen(),
+            '/reset-password': (context) {
+              final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+              return ResetPasswordScreen(
+                userId: args['userId'],
+                secret: args['secret'],
+              );
+            },
           },
         );
       },

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/appwrite_data_service.dart';
-import 'package:appwrite/models.dart' as models;
+import 'package:intl/intl.dart';
 
 class StudyPlannerScreen extends StatefulWidget {
   const StudyPlannerScreen({super.key});
@@ -30,7 +30,8 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
     if (!mounted) return;
     setState(() => isLoading = true);
     try {
-      final docs = await _dataService.getTasks();
+      // Fetch tasks for the selected date
+      final docs = await _dataService.getTasks(date: selectedDate);
       if (mounted) {
         setState(() {
           tasks = docs.map((doc) {
@@ -48,13 +49,13 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
     }
   }
 
-  // ➕ Add Task
   Future<void> addTask() async {
     if (controller.text.isEmpty) return;
 
     final newTaskData = {
       "title": controller.text,
-      "IsComplited": false, // Exact match to your Console: "IsComplited"
+      "IsComplited": false,
+      "date": selectedDate.toString().split(' ')[0], // yyyy-MM-dd
     };
 
     final doc = await _dataService.addTask(newTaskData);
@@ -65,7 +66,7 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Error: Check Permissions & ensure 'userId' is Indexed in Console"),
+            content: Text("Error: Ensure 'date' attribute exists & 'userId' is Indexed in Appwrite Console"),
             backgroundColor: Colors.red,
           ),
         );
@@ -75,11 +76,23 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
 
   void filterTasks() {
     setState(() {
-      filteredTasks = tasks; 
+      // Sort tasks: Incomplete first, then by title
+      filteredTasks = List.from(tasks);
+      filteredTasks.sort((a, b) {
+        bool aDone = a["IsComplited"] ?? false;
+        bool bDone = b["IsComplited"] ?? false;
+        if (aDone && !bDone) return 1;
+        if (!aDone && bDone) return -1;
+        return (a["title"] ?? "").toString().compareTo((b["title"] ?? "").toString());
+      });
     });
   }
 
   void searchTasks(String query) {
+    if (query.isEmpty) {
+      filterTasks();
+      return;
+    }
     setState(() {
       filteredTasks = tasks.where((task) {
         return (task["title"] ?? "")
@@ -101,35 +114,25 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
     _loadTasks();
   }
 
-  void editTask(Map<String, dynamic> task) {
-    controller.text = task["title"] ?? "";
-
-    showDialog(
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Task"),
-        content: TextField(controller: controller),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              if (controller.text.isNotEmpty) {
-                await _dataService.updateTask(task["id"], {"title": controller.text});
-                controller.clear();
-                if (mounted) Navigator.pop(context);
-                _loadTasks();
-              }
-            },
-            child: const Text("Save"),
-          )
-        ],
-      ),
+      initialDate: selectedDate,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
     );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+      _loadTasks();
+    }
   }
 
   double getProgress() {
-    if (filteredTasks.isEmpty) return 0;
-    int done = filteredTasks.where((t) => t["IsComplited"] == true).length;
-    return done / filteredTasks.length;
+    if (tasks.isEmpty) return 0;
+    int done = tasks.where((t) => t["IsComplited"] == true).length;
+    return done / tasks.length;
   }
 
   @override
@@ -142,13 +145,14 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
       appBar: AppBar(
         title: const Text("Study Planner"),
         centerTitle: true,
-        backgroundColor: const Color(0xFF26C6DA),
+        backgroundColor: const Color(0xFF00ACC1),
+        elevation: 0,
       ),
       body: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF121212) : null,
+          color: isDark ? const Color(0xFF121212) : Colors.white,
           gradient: isDark ? null : const LinearGradient(
-            colors: [Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFF80DEEA)],
+            colors: [Color(0xFFE0F7FA), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -160,55 +164,96 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 15),
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+              ),
               child: TextField(
                 controller: searchController,
                 onChanged: searchTasks,
                 decoration: const InputDecoration(
                   hintText: "Search task...",
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF00ACC1)),
                   border: InputBorder.none,
                 ),
               ),
             ),
             const SizedBox(height: 10),
-            // Progress
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 15),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, color: Color(0xFF26C6DA)),
-                      const SizedBox(width: 10),
-                      Text(selectedDate.toString().split(' ')[0], style: TextStyle(color: textColor)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(value: getProgress(), minHeight: 8, color: const Color(0xFF26C6DA)),
-                ],
+            // Date Picker & Progress
+            GestureDetector(
+              onTap: () => _selectDate(context),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 15),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month, color: Color(0xFF00ACC1)),
+                            const SizedBox(width: 10),
+                            Text(
+                              DateFormat('EEEE, dd MMM').format(selectedDate),
+                              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: getProgress(),
+                        minHeight: 8,
+                        color: const Color(0xFF00ACC1),
+                        backgroundColor: Colors.grey[200],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          "${(getProgress() * 100).toInt()}% Completed",
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 10),
             // Add Task
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 15),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: controller,
-                      decoration: const InputDecoration(hintText: "Enter task...", border: InputBorder.none),
+                      decoration: const InputDecoration(hintText: "What's on your mind?", border: InputBorder.none),
                     ),
                   ),
-                  ElevatedButton(
+                  IconButton(
                     onPressed: addTask,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF26C6DA)),
-                    child: const Icon(Icons.add, color: Colors.white),
+                    icon: const Icon(Icons.add_circle, color: Color(0xFF00ACC1), size: 30),
                   )
                 ],
               ),
@@ -219,27 +264,58 @@ class _StudyPlannerScreenState extends State<StudyPlannerScreen> {
               child: isLoading 
                 ? const Center(child: CircularProgressIndicator())
                 : filteredTasks.isEmpty
-                  ? const Center(child: Text("No tasks found"))
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.assignment_turned_in_outlined, size: 60, color: Colors.grey[300]),
+                          const SizedBox(height: 10),
+                          Text("No tasks for this day", style: TextStyle(color: Colors.grey[500])),
+                        ],
+                      ),
+                    )
                   : ListView.builder(
+                padding: const EdgeInsets.only(bottom: 20),
                 itemCount: filteredTasks.length,
                 itemBuilder: (context, index) {
                   final task = filteredTasks[index];
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
-                    child: ListTile(
-                      leading: Checkbox(
-                        value: task["IsComplited"] ?? false,
-                        onChanged: (_) => toggleTask(task),
+                  final bool isDone = task["IsComplited"] ?? false;
+                  return Dismissible(
+                    key: Key(task["id"]),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      color: Colors.red,
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    onDismissed: (_) => deleteTask(task["id"]),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5)],
                       ),
-                      title: Text(task["title"] ?? "Untitled", style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(icon: const Icon(Icons.edit, size: 20), onPressed: () => editTask(task)),
-                          IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 20), onPressed: () => deleteTask(task["id"])),
-                        ],
+                      child: ListTile(
+                        leading: Transform.scale(
+                          scale: 1.2,
+                          child: Checkbox(
+                            value: isDone,
+                            activeColor: const Color(0xFF00ACC1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            onChanged: (_) => toggleTask(task),
+                          ),
+                        ),
+                        title: Text(
+                          task["title"] ?? "Untitled",
+                          style: TextStyle(
+                            color: isDone ? Colors.grey : textColor,
+                            fontWeight: FontWeight.bold,
+                            decoration: isDone ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        trailing: Icon(Icons.more_vert, color: Colors.grey[400]),
                       ),
                     ),
                   );
